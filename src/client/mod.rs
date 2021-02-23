@@ -60,7 +60,7 @@ impl Message {
     /// It returns an error if the bytes don't correspond to a client message.
     pub fn from(bytes: Bytes) -> crate::Result<Self> {
         let deserialized = WireMsg::deserialize(bytes)?;
-        if let MessageType::ClientMessage(msg) = deserialized {
+        if let MessageType::ClientMessage((msg, _dest_key)) = deserialized {
             Ok(msg)
         } else {
             Err(crate::Error::FailedToParse(
@@ -69,9 +69,21 @@ impl Message {
         }
     }
 
+    /// Return the destination section PublicKey for this message
+    pub fn dest_pk(bytes: Bytes) -> crate::Result<PublicKey> {
+        let deserialized = WireMsg::deserialize(bytes)?;
+        if let MessageType::ClientMessage((_query, dest_pk)) = deserialized {
+            Ok(dest_pk)
+        } else {
+            Err(crate::Error::FailedToParse(
+                "bytes as a client message".to_string(),
+            ))
+        }
+    }
+
     /// serialize this Message into bytes ready to be sent over the wire.
-    pub fn serialize(&self) -> crate::Result<Bytes> {
-        WireMsg::serialize_client_msg(self)
+    pub fn serialize(&self, dest_key: PublicKey) -> crate::Result<Bytes> {
+        WireMsg::serialize_client_msg(self, dest_key)
     }
 }
 
@@ -599,8 +611,10 @@ mod tests {
         };
 
         // test msgpack serialization
-        let serialized = message.serialize()?;
-        let deserialized = Message::from(serialized)?;
+        let serialized = message.serialize(pk)?;
+        let deserialized = Message::from(serialized.clone())?;
+        let found_pk = Message::dest_pk(serialized)?;
+        assert_eq!(found_pk, pk);
         assert_eq!(deserialized, message);
 
         Ok(())

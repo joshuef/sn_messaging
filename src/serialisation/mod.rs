@@ -15,6 +15,7 @@ use super::node;
 use super::{client, section_info, Error, MessageType, Result};
 use bytes::Bytes;
 use cookie_factory::{combinator::slice, gen};
+use sn_data_types::PublicKey;
 use std::fmt::Debug;
 
 // In order to send a message over the wire, it needs to be serialized
@@ -37,8 +38,11 @@ impl WireMsg {
     }
 
     /// Creates a new instance keeping a (serialized) copy of the 'SectionInfo' message provided.
-    pub fn new_sectioninfo_msg(query: &section_info::Message) -> Result<WireMsg> {
-        let payload_vec = rmp_serde::to_vec_named(&query).map_err(|err| {
+    pub fn new_sectioninfo_msg(
+        query: &section_info::Message,
+        dest_key: PublicKey,
+    ) -> Result<WireMsg> {
+        let payload_vec = rmp_serde::to_vec_named(&(query, dest_key)).map_err(|err| {
             Error::Serialisation(format!(
                 "could not serialize network info payload with Msgpack: {}",
                 err
@@ -52,8 +56,8 @@ impl WireMsg {
     }
 
     /// Creates a new instance keeping a (serialized) copy of the client 'Message' message provided.
-    pub fn new_client_msg(msg: &client::Message) -> Result<WireMsg> {
-        let payload_vec = rmp_serde::to_vec_named(&msg).map_err(|err| {
+    pub fn new_client_msg(msg: &client::Message, dest_key: PublicKey) -> Result<WireMsg> {
+        let payload_vec = rmp_serde::to_vec_named(&(msg, dest_key)).map_err(|err| {
             Error::Serialisation(format!(
                 "could not serialize client message payload (id: {}) with Msgpack: {}",
                 msg.id(),
@@ -69,8 +73,8 @@ impl WireMsg {
 
     /// Creates a new instance keeping a (serialized) copy of the node 'Message' message provided.
     #[cfg(not(feature = "client-only"))]
-    pub fn new_node_msg(msg: &node::NodeMessage) -> Result<WireMsg> {
-        let payload_vec = rmp_serde::to_vec_named(&msg).map_err(|err| {
+    pub fn new_node_msg(msg: &node::NodeMessage, dest_key: PublicKey) -> Result<WireMsg> {
+        let payload_vec = rmp_serde::to_vec_named(&(msg, dest_key)).map_err(|err| {
             Error::Serialisation(format!(
                 "could not serialize node message payload with Msgpack: {}",
                 err
@@ -88,10 +92,29 @@ impl WireMsg {
     pub fn from(bytes: Bytes) -> Result<Self> {
         // Deserialize the header bytes first
         let (header, payload) = WireMsgHeader::from(bytes)?;
-
         // We can now create a deserialized WireMsg using the read bytes
         Ok(Self { header, payload })
     }
+
+    // /// Return the destination section PublicKey for this message
+    // pub fn dest_pk(&self) -> Result<PublicKey> {
+    //     let deserialized = WireMsg::deserialize(self.payload.clone())?;
+
+    //     match deserialized {
+    //         MessageType::ClientMessage((_, dest_pk)) | MessageType::SectionInfo((_, dest_pk)) => {
+    //             Ok(dest_pk)
+    //         },
+    //         #[cfg(not(feature = "client-only"))]
+    //         MessageType::NodeMessage((_, dest_pk)) => Ok(dest_pk),
+    //         _ => {
+
+    //             Err(crate::Error::FailedToParse(
+    //                 "dest key from message. It does not have a dest key".to_string(),
+    //             ))
+    //         }
+    //     }
+
+    // }
 
     /// Return the serialized WireMsg, which contains the WireMsgHeader bytes,
     /// followed by the payload bytes, i.e. the serialized Message.
@@ -116,17 +139,17 @@ impl WireMsg {
         match self.header.kind() {
             MessageKind::Ping => Ok(MessageType::Ping),
             MessageKind::SectionInfo => {
-                let query: section_info::Message =
+                let msg_contents: (section_info::Message, PublicKey) =
                     rmp_serde::from_slice(&self.payload).map_err(|err| {
                         Error::FailedToParse(format!(
                             "Client message payload as Msgpack: {}",
                             err
                         ))
                     })?;
-                Ok(MessageType::SectionInfo(query))
+                Ok(MessageType::SectionInfo(msg_contents))
             }
             MessageKind::ClientMessage => {
-                let client_msg: client::Message =
+                let client_msg: (client::Message, PublicKey) =
                     rmp_serde::from_slice(&self.payload).map_err(|err| {
                         Error::FailedToParse(format!(
                             "Client message payload as Msgpack: {}",
@@ -141,7 +164,7 @@ impl WireMsg {
             }
             #[cfg(not(feature = "client-only"))]
             MessageKind::NodeMessage => {
-                let node_msg: node::NodeMessage =
+                let node_msg: (node::NodeMessage, PublicKey) =
                     rmp_serde::from_slice(&self.payload).map_err(|err| {
                         Error::FailedToParse(format!("Node message payload as Msgpack: {}", err))
                     })?;
@@ -156,26 +179,30 @@ impl WireMsg {
     /// Convenience function which creates a temporary WireMsg from the provided
     /// bytes, returning the deserialized message.
     pub fn deserialize(bytes: Bytes) -> Result<MessageType> {
-        Self::from(bytes)?.to_message()
+        let i = Self::from(bytes)?;
+        i.to_message()
     }
 
     /// Convenience function which creates a temporary WireMsg from the provided
     /// MsgEnvelope, returning the serialized WireMsg.
-    pub fn serialize_sectioninfo_msg(query: &section_info::Message) -> Result<Bytes> {
-        Self::new_sectioninfo_msg(query)?.serialize()
+    pub fn serialize_sectioninfo_msg(
+        query: &section_info::Message,
+        dest_key: PublicKey,
+    ) -> Result<Bytes> {
+        Self::new_sectioninfo_msg(query, dest_key)?.serialize()
     }
 
     /// Convenience function which creates a temporary WireMsg from the provided
     /// Message, returning the serialized WireMsg.
-    pub fn serialize_client_msg(msg: &client::Message) -> Result<Bytes> {
-        Self::new_client_msg(msg)?.serialize()
+    pub fn serialize_client_msg(msg: &client::Message, dest_key: PublicKey) -> Result<Bytes> {
+        Self::new_client_msg(msg, dest_key)?.serialize()
     }
 
     /// Convenience function which creates a temporary WireMsg from the provided
     /// node::Messsage, returning the serialized WireMsg.
     #[cfg(not(feature = "client-only"))]
-    pub fn serialize_node_msg(msg: &node::NodeMessage) -> Result<Bytes> {
-        Self::new_node_msg(msg)?.serialize()
+    pub fn serialize_node_msg(msg: &node::NodeMessage, dest_key: PublicKey) -> Result<Bytes> {
+        Self::new_node_msg(msg, dest_key)?.serialize()
     }
 
     // Private function which returns the bytes size of this WireMsg
@@ -189,6 +216,8 @@ impl WireMsg {
 mod tests {
     use super::*;
     use anyhow::Result;
+    use rand_core::OsRng;
+    use sn_data_types::Keypair;
     use xor_name::XorName;
 
     #[test]
@@ -205,12 +234,19 @@ mod tests {
     #[test]
     fn serialisation_sectioninfo_msg() -> Result<()> {
         let random_xor = XorName::random();
+        let mut rng = OsRng;
+        let section_pk = Keypair::new_ed25519(&mut rng).public_key();
         let query = section_info::Message::GetSectionQuery(random_xor);
-        let wire_msg = WireMsg::new_sectioninfo_msg(&query)?;
+        let wire_msg = WireMsg::new_sectioninfo_msg(&query, section_pk)?;
         let serialized = wire_msg.serialize()?;
         let deserialized = WireMsg::from(serialized)?;
         assert_eq!(deserialized, wire_msg);
-        assert_eq!(wire_msg.to_message()?, MessageType::SectionInfo(query));
+        assert_eq!(
+            wire_msg.to_message()?,
+            MessageType::SectionInfo((query, section_pk))
+        );
+
+        // assert_eq!(wire_msg.dest_pk()?, section_pk);
 
         Ok(())
     }

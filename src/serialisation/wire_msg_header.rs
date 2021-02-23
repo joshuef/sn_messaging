@@ -17,7 +17,7 @@ use std::{convert::TryFrom, fmt::Debug, mem::size_of};
 
 // Current version of the messaging protocol.
 // At this point this implementation supports only this version.
-const MESSAGING_PROTO_VERSION: u16 = 1u16;
+const MESSAGING_PROTO_VERSION: u16 = 2u16;
 
 // Header to be serialisied at the front of the wire message.
 // This header contains the information needed to deserialize the payload.
@@ -94,7 +94,6 @@ impl WireMsgHeader {
 
         // Get a slice for the payload bytes, i.e. the bytes after the header bytes
         let payload_bytes = bytes.split_off(header_size.into());
-
         Ok((header, payload_bytes))
     }
 

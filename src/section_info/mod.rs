@@ -92,7 +92,7 @@ impl Message {
     /// It returns an error if the bytes don't correspond to a network info query.
     pub fn from(bytes: Bytes) -> crate::Result<Self> {
         let deserialized = WireMsg::deserialize(bytes)?;
-        if let MessageType::SectionInfo(query) = deserialized {
+        if let MessageType::SectionInfo((query, _dest_pk)) = deserialized {
             Ok(query)
         } else {
             Err(crate::Error::FailedToParse(
@@ -101,8 +101,20 @@ impl Message {
         }
     }
 
+    /// Return the destination section PublicKey for this message
+    pub fn dest_pk(bytes: Bytes) -> crate::Result<PublicKey> {
+        let deserialized = WireMsg::deserialize(bytes)?;
+        if let MessageType::SectionInfo((_query, dest_pk)) = deserialized {
+            Ok(dest_pk)
+        } else {
+            Err(crate::Error::FailedToParse(
+                "bytes as a network info message".to_string(),
+            ))
+        }
+    }
+
     /// serialize this Query into bytes ready to be sent over the wire.
-    pub fn serialize(&self) -> crate::Result<Bytes> {
-        WireMsg::serialize_sectioninfo_msg(self)
+    pub fn serialize(&self, dest_key: PublicKey) -> crate::Result<Bytes> {
+        WireMsg::serialize_sectioninfo_msg(self, dest_key)
     }
 }

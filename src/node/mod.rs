@@ -10,6 +10,7 @@
 use crate::{Error, MessageType, Result, WireMsg};
 use bytes::Bytes;
 use serde::{Deserialize, Serialize};
+use sn_data_types::PublicKey;
 use std::fmt::{self, Debug, Formatter};
 
 /// Node message sent over the network.
@@ -28,16 +29,28 @@ impl NodeMessage {
     /// It returns an error if the bytes don't correspond to a node message.
     pub fn from(bytes: Bytes) -> Result<Self> {
         let deserialized = WireMsg::deserialize(bytes)?;
-        if let MessageType::NodeMessage(msg) = deserialized {
+        if let MessageType::NodeMessage((msg, _dest_pk)) = deserialized {
             Ok(msg)
         } else {
             Err(Error::FailedToParse("bytes as a node message".to_string()))
         }
     }
 
+    /// Return the destination section PublicKey for this message
+    pub fn dest_pk(bytes: Bytes) -> crate::Result<PublicKey> {
+        let deserialized = WireMsg::deserialize(bytes)?;
+        if let MessageType::NodeMessage((_query, dest_pk)) = deserialized {
+            Ok(dest_pk)
+        } else {
+            Err(crate::Error::FailedToParse(
+                "bytes as a node message".to_string(),
+            ))
+        }
+    }
+
     /// serialize this NodeMessage into bytes ready to be sent over the wire.
-    pub fn serialize(&self) -> Result<Bytes> {
-        WireMsg::serialize_node_msg(self)
+    pub fn serialize(&self, dest_pk: PublicKey) -> Result<Bytes> {
+        WireMsg::serialize_node_msg(self, dest_pk)
     }
 }
 
