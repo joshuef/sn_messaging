@@ -99,8 +99,6 @@ pub enum Message {
         cmd: Cmd,
         /// Message ID.
         id: MessageId,
-        /// Target section's current PublicKey
-        target_section_pk: Option<PublicKey>,
     },
     /// Queries is a read-only operation.
     Query {
@@ -108,8 +106,6 @@ pub enum Message {
         query: Query,
         /// Message ID.
         id: MessageId,
-        /// Target section's current PublicKey
-        target_section_pk: Option<PublicKey>,
     },
     /// An Event is a fact about something that happened.
     Event {
@@ -119,8 +115,6 @@ pub enum Message {
         id: MessageId,
         /// ID of causing cmd.
         correlation_id: MessageId,
-        /// Target section's current PublicKey
-        target_section_pk: Option<PublicKey>,
     },
     /// The response to a query, containing the query result.
     QueryResponse {
@@ -132,8 +126,6 @@ pub enum Message {
         correlation_id: MessageId,
         /// The sender of the causing query.
         query_origin: SrcLocation,
-        /// Target section's current PublicKey
-        target_section_pk: Option<PublicKey>,
     },
     /// Cmd error.
     CmdError {
@@ -145,8 +137,6 @@ pub enum Message {
         correlation_id: MessageId,
         /// The sender of the causing cmd.
         cmd_origin: SrcLocation,
-        /// Target section's current PublicKey
-        target_section_pk: Option<PublicKey>,
     },
     /// Cmds only sent internally in the network.
     NodeCmd {
@@ -154,8 +144,6 @@ pub enum Message {
         cmd: NodeCmd,
         /// Message ID.
         id: MessageId,
-        /// Target section's current PublicKey
-        target_section_pk: Option<PublicKey>,
     },
     /// An error of a NodeCmd.
     NodeCmdError {
@@ -167,8 +155,6 @@ pub enum Message {
         correlation_id: MessageId,
         /// The sender of the causing cmd.
         cmd_origin: SrcLocation,
-        /// Target section's current PublicKey
-        target_section_pk: Option<PublicKey>,
     },
     /// Events only sent internally in the network.
     NodeEvent {
@@ -178,8 +164,6 @@ pub enum Message {
         id: MessageId,
         /// ID of causing cmd.
         correlation_id: MessageId,
-        /// Target section's current PublicKey
-        target_section_pk: Option<PublicKey>,
     },
     /// Queries is a read-only operation.
     NodeQuery {
@@ -187,8 +171,6 @@ pub enum Message {
         query: NodeQuery,
         /// Message ID.
         id: MessageId,
-        /// Target section's current PublicKey
-        target_section_pk: Option<PublicKey>,
     },
     /// The response to a query, containing the query result.
     NodeQueryResponse {
@@ -200,8 +182,6 @@ pub enum Message {
         correlation_id: MessageId,
         /// The sender of the causing query.
         query_origin: SrcLocation,
-        /// Target section's current PublicKey
-        target_section_pk: Option<PublicKey>,
     },
 }
 
@@ -219,42 +199,6 @@ impl Message {
             | Self::NodeQuery { id, .. }
             | Self::NodeCmdError { id, .. }
             | Self::NodeQueryResponse { id, .. } => *id,
-        }
-    }
-
-    /// Gets the message's expected section PublicKey.
-    pub fn target_section_pk(&self) -> Option<PublicKey> {
-        match self {
-            Self::Cmd {
-                target_section_pk, ..
-            }
-            | Self::Query {
-                target_section_pk, ..
-            }
-            | Self::Event {
-                target_section_pk, ..
-            }
-            | Self::QueryResponse {
-                target_section_pk, ..
-            }
-            | Self::CmdError {
-                target_section_pk, ..
-            }
-            | Self::NodeCmd {
-                target_section_pk, ..
-            }
-            | Self::NodeEvent {
-                target_section_pk, ..
-            }
-            | Self::NodeQuery {
-                target_section_pk, ..
-            }
-            | Self::NodeCmdError {
-                target_section_pk, ..
-            }
-            | Self::NodeQueryResponse {
-                target_section_pk, ..
-            } => *target_section_pk,
         }
     }
 }
@@ -607,7 +551,6 @@ mod tests {
         let message = Message::Query {
             query: Query::Transfer(TransferQuery::GetBalance(pk)),
             id,
-            target_section_pk: None,
         };
 
         // test msgpack serialization
