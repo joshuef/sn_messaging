@@ -12,12 +12,9 @@ use crate::{
     EndUser,
 };
 use serde::{Deserialize, Serialize};
-use sn_data_types::{
-    ActorHistory, Blob, BlobAddress, Credit, DebitId, NodeRewardStage, PublicKey, ReplicaEvent,
-    SectionElders, Signature, SignatureShare, SignedCredit, SignedTransferShare, Token,
-    TransferAgreementProof, TransferValidated, WalletInfo,
-};
+use sn_data_types::{ActorHistory, Blob, BlobAddress, Credit, DebitId, NodeRewardStage, PublicKey, ReplicaEvent, Signature, SignatureShare, SignedCredit, SignedTransferShare, TransferAgreementProof, TransferValidated, WalletInfo};
 use std::collections::{BTreeMap, BTreeSet};
+use threshold_crypto::PublicKeySet;
 use xor_name::XorName;
 
 use super::{BlobRead, BlobWrite};
@@ -76,11 +73,6 @@ pub enum NodeSystemCmd {
         /// Current holders.
         current_holders: BTreeSet<XorName>,
     },
-    ///
-    CreateSectionWallet {
-        amount: Token,
-        key: threshold_crypto::PublicKey,
-    },
 }
 
 ///
@@ -112,17 +104,15 @@ pub enum NodeEvent {
         proof: Signature,
     },
     ///
-    RewardPayoutValidated(TransferValidated),
-    /// Sent to all section Elders after
-    // a completed transition to a new constellation.
+    SectionPayoutValidated(TransferValidated),
+    ///
+    SectionPayoutRegistered { from: PublicKey, to: PublicKey },
+    ///
     PromotedToElder {
-        /// The new section wallet.
         section_wallet: WalletInfo,
-        /// Registered node reward wallets.
         node_rewards: BTreeMap<XorName, NodeRewardStage>,
-        /// Transfer histories
         user_wallets: BTreeMap<PublicKey, ActorHistory>,
-    },
+    }
 }
 
 ///
@@ -166,6 +156,10 @@ pub enum NodeRewardQuery {
 ///
 #[derive(Debug, Eq, PartialEq, Clone, Serialize, Deserialize)]
 pub enum NodeTransferQuery {
+    /// On Elder change, all Elders need to query
+    /// network for the new wallet's replicas' public key set
+    /// and the history of events of the wallet (which will be empty at that point..).
+    GetWalletReplicas(PublicKey),
     /// Replicas starting up
     /// need to query for events of
     /// the existing Replicas. (Sent to the other Elders).
@@ -175,9 +169,6 @@ pub enum NodeTransferQuery {
 ///
 #[derive(Debug, Eq, PartialEq, Clone, Serialize, Deserialize)]
 pub enum NodeSystemQuery {
-    /// On Elder change, all Elders need to query
-    /// network for the new wallet's replicas' public key set
-    GetSectionElders,
     /// Acquire the chunk from current holders for replication.
     GetChunk {
         /// New Holder's name.
@@ -190,14 +181,6 @@ pub enum NodeSystemQuery {
 }
 
 ///
-#[derive(Debug, Eq, PartialEq, Clone, Serialize, Deserialize)]
-pub enum NodeSystemQueryResponse {
-    /// On Elder change, all Elders need to query
-    /// network for the new wallet's replicas' public key set
-    GetSectionElders(SectionElders),
-}
-
-///
 #[allow(clippy::large_enum_variant)]
 #[derive(Debug, Eq, PartialEq, Clone, Serialize, Deserialize)]
 pub enum NodeQueryResponse {
@@ -207,8 +190,6 @@ pub enum NodeQueryResponse {
     Rewards(NodeRewardQueryResponse),
     ///
     Transfers(NodeTransferQueryResponse),
-    ///
-    System(NodeSystemQueryResponse),
 }
 
 ///
@@ -225,6 +206,10 @@ pub enum NodeRewardQueryResponse {
 #[allow(clippy::large_enum_variant)]
 #[derive(Debug, Eq, PartialEq, Clone, Serialize, Deserialize)]
 pub enum NodeTransferQueryResponse {
+    /// On Elder change, all Elders need to query
+    /// network for the new wallet's replicas' public key set
+    /// and the history of events of the wallet (which will be empty at that point..).
+    GetWalletReplicas(PublicKeySet),
     /// Replicas starting up
     /// need to query for events of
     /// the existing Replicas.
