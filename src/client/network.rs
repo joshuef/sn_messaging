@@ -132,6 +132,15 @@ pub enum NodeEvent {
     RewardPayoutValidated(TransferValidated),
     /// The new section wallet.
     SectionWalletCreated(WalletHistory),
+    SectionPayoutValidated(TransferValidated),
+    ///
+    SectionPayoutRegistered { from: PublicKey, to: PublicKey },
+    ///
+    PromotedToElder {
+        section_wallet: WalletInfo,
+        node_rewards: BTreeMap<XorName, NodeRewardStage>,
+        user_wallets: BTreeMap<PublicKey, ActorHistory>,
+    }
 }
 
 ///
