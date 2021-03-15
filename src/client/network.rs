@@ -15,7 +15,7 @@ use serde::{Deserialize, Serialize};
 use sn_data_types::{
     ActorHistory, Blob, BlobAddress, Credit, CreditAgreementProof, DebitId, NodeRewardStage,
     PublicKey, ReplicaEvent, SectionElders, Signature, SignatureShare, SignedCredit,
-    SignedTransferShare, TransferAgreementProof, TransferValidated, WalletHistory,
+    SignedTransferShare, TransferAgreementProof, TransferValidated, WalletHistory
 };
 
 use std::collections::{BTreeMap, BTreeSet};
@@ -139,7 +139,7 @@ pub enum NodeEvent {
         section_wallet: WalletInfo,
         node_rewards: BTreeMap<XorName, NodeRewardStage>,
         user_wallets: BTreeMap<PublicKey, ActorHistory>,
-    }
+    },
 }
 
 ///
