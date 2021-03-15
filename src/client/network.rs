@@ -137,7 +137,7 @@ pub enum NodeEvent {
         section_wallet: WalletHistory,
         node_rewards: BTreeMap<XorName, NodeRewardStage>,
         user_wallets: BTreeMap<PublicKey, ActorHistory>,
-    }
+    },
 }
 
 ///
