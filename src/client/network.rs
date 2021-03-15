@@ -12,7 +12,11 @@ use crate::{
     EndUser,
 };
 use serde::{Deserialize, Serialize};
-use sn_data_types::{ActorHistory, Blob, BlobAddress, Credit, DebitId, NodeRewardStage, PublicKey, ReplicaEvent, Signature, SignatureShare, SignedCredit, SignedTransferShare, TransferAgreementProof, TransferValidated, WalletInfo};
+use sn_data_types::{
+    ActorHistory, Blob, BlobAddress, Credit, DebitId, NodeRewardStage, PublicKey, ReplicaEvent,
+    Signature, SignatureShare, SignedCredit, SignedTransferShare, TransferAgreementProof,
+    TransferValidated, WalletInfo,
+};
 use std::collections::{BTreeMap, BTreeSet};
 use threshold_crypto::PublicKeySet;
 use xor_name::XorName;
@@ -112,7 +116,7 @@ pub enum NodeEvent {
         section_wallet: WalletInfo,
         node_rewards: BTreeMap<XorName, NodeRewardStage>,
         user_wallets: BTreeMap<PublicKey, ActorHistory>,
-    }
+    },
 }
 
 ///
