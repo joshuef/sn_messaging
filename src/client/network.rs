@@ -134,12 +134,12 @@ pub enum NodeEvent {
     SectionPayoutValidated(TransferValidated),
     ///
     SectionPayoutRegistered { from: PublicKey, to: PublicKey },
-    ///
-    PromotedToElder {
-        section_wallet: WalletInfo,
-        node_rewards: BTreeMap<XorName, NodeRewardStage>,
-        user_wallets: BTreeMap<PublicKey, ActorHistory>,
-    },
+    // ///
+    // PromotedToElder {
+    //     section_wallet: WalletInfo,
+    //     node_rewards: BTreeMap<XorName, NodeRewardStage>,
+    //     user_wallets: BTreeMap<PublicKey, ActorHistory>,
+    // },
 }
 
 ///
