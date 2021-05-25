@@ -356,7 +356,7 @@ impl From<MessageKind> for u8 {
 }
 
 
-pub fn update_dest_xor_for_serialized_bytes( mut bytes: Bytes, dest: XorName)  -> Result<Bytes> {
+pub fn update_dest_xor_for_serialized_bytes( bytes: Bytes, dest: XorName)  -> Result<Bytes> {
     // let new_bytes = bytes.clone();
     // use cookie_factory::{
     //     bytes::{be_u16, be_u8},
@@ -373,9 +373,9 @@ pub fn update_dest_xor_for_serialized_bytes( mut bytes: Bytes, dest: XorName)  -
     }
     println!("Aaaaaaa");
     // lets split payload and header out here, bytes retains everything before
-    let payload_and_pk = bytes.split_off(HDR_DEST_BYTES_END);
+    let (header_to_dest, payload_and_pk) = bytes.split_at(HDR_DEST_BYTES_END);
     // for calrity
-    let header_to_dest = bytes;
+    // let header_to_dest = bytes;
     
     
     // let (header_ending_in_dest, payload_and_pk) = bytes.split_at(HDR_DEST_BYTES_END);
@@ -392,6 +392,8 @@ pub fn update_dest_xor_for_serialized_bytes( mut bytes: Bytes, dest: XorName)  -
     
     println!("Cccccccccc");
     // ...write the destination bytes
+
+
     let (bytes_w_dest, _) = gen(slice(dest), buffer).map_err(|err| {
         Error::Serialisation(format!(
             "destination field couldn't be serialized in header: {}",
