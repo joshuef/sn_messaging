@@ -23,7 +23,7 @@ use xor_name::XorName;
 // along with a header (WireMsgHeader) which contains the information needed
 // by the recipient to properly deserialize it.
 // The WireMsg struct provides the utilities to serialize and deserialize messages.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct WireMsg {
     header: WireMsgHeader,
     payload: Bytes,
@@ -297,6 +297,16 @@ impl WireMsg {
     // taking into account current self-contained payload.
     fn size(&self) -> usize {
         self.header.size() as usize + self.payload.len()
+    }
+
+
+    pub fn update_dest_info(&mut self, dest_pk: Option<PublicKey>, dest: Option<XorName>) {
+        if let Some(dest) = dest {
+            self.header.dest = dest
+        }
+        if let Some(dest_pk) = dest_pk {
+            self.header.dest_section_pk = dest_pk
+        }
     }
 }
 

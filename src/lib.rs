@@ -91,6 +91,41 @@ impl MessageType {
         }
     }
 
+    pub fn to_wire_msg(&self) -> Result<WireMsg> {
+        match self {
+            Self::Ping(dest_info) => {
+                Ok(WireMsg::new_ping_msg(dest_info.dest, dest_info.dest_section_pk))
+                
+            }
+            Self::SectionInfo { msg, dest_info } => {
+                WireMsg::new_section_info_msg(msg, dest_info.dest, dest_info.dest_section_pk)
+                
+            }
+            Self::Client { msg, dest_info } => {
+                WireMsg::new_client_msg(msg, dest_info.dest, dest_info.dest_section_pk)
+                
+            }
+            #[cfg(not(feature = "client-only"))]
+            Self::Routing { msg, dest_info } => {
+                WireMsg::new_routing_msg(msg, dest_info.dest, dest_info.dest_section_pk)
+                
+            }
+            #[cfg(not(feature = "client-only"))]
+            Self::Node {
+                msg,
+                dest_info,
+                src_section_pk,
+            } => {
+            WireMsg::new_node_msg(
+                msg,
+                dest_info.dest,
+                dest_info.dest_section_pk,
+                *src_section_pk,
+            ) 
+        },
+        }
+    }
+
     pub fn update_dest_info(&mut self, dest_pk: Option<PublicKey>, dest: Option<XorName>) {
         #[cfg(not(feature = "client-only"))]
         match self {
