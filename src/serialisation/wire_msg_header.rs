@@ -216,6 +216,8 @@ impl WireMsgHeader {
         Ok((header, payload_bytes))
     }
 
+   
+
     pub fn write<'a>(&self, buffer: &'a mut [u8]) -> Result<&'a mut [u8]> {
         // Let's write the header size first
         let (buf_at_version, _) = gen(be_u16(self.header_size), buffer).map_err(|err| {
@@ -353,6 +355,74 @@ impl From<MessageKind> for u8 {
     }
 }
 
+
+pub fn update_dest_xor_for_serialized_bytes( mut bytes: Bytes, dest: XorName)  -> Result<Bytes> {
+    // let new_bytes = bytes.clone();
+    // use cookie_factory::{
+    //     bytes::{be_u16, be_u8},
+    //     combinator::slice,
+    //     gen,
+    // };
+
+    let length = bytes.len();
+    if length < HDR_SIZE_BYTES_LEN {
+        return Err(Error::FailedToParse(format!(
+            "not enough bytes received ({}) to even read the wire message header length field",
+            length
+        )));
+    }
+    println!("Aaaaaaa");
+    // lets split payload and header out here, bytes retains everything before
+    let payload_and_pk = bytes.split_off(HDR_DEST_BYTES_END);
+    // for calrity
+    let header_to_dest = bytes;
+    
+    
+    // let (header_ending_in_dest, payload_and_pk) = bytes.split_at(HDR_DEST_BYTES_END);
+    
+    let mut buffer = vec![0u8; HDR_DEST_BYTES_START];
+    // let mut buffer = vec![0u8; header_to_dest.len()];
+    
+    println!("BBBbbbbbb");
+    // let consistent_header_len = HDR_SIZE_BYTES_LEN + 
+    // let mut header_w_dest = [0; header_ending_in_dest.len()];
+    
+    // let header_no_dest_no_pk_bytes =  
+    buffer[0..].copy_from_slice(&header_to_dest[0..HDR_DEST_BYTES_START]);
+    
+    println!("Cccccccccc");
+    // ...write the destination bytes
+    let (bytes_w_dest, _) = gen(slice(dest), buffer).map_err(|err| {
+        Error::Serialisation(format!(
+            "destination field couldn't be serialized in header: {}",
+            err
+        ))
+    })?;
+
+    // let bytes_w_dest =  Bytes::from(bytes_w_dest);
+
+    let updated_bytes = [ bytes_w_dest, payload_and_pk.to_vec()].concat();
+
+        // // ...write the destination bytes
+        // let (buf_at_dest_pk, _) = gen(slice(&self.dest), buf_at_dest).map_err(|err| {
+        //     Error::Serialisation(format!(
+        //         "destination field couldn't be serialized in header: {}",
+        //         err
+        //     ))
+        // })?;
+
+    // // ...now let's write the destination section public key
+    // let (bytes_w_pk, _) = gen(slice(dest_pk.to_bytes()), bytes_w_dest)
+    //     .map_err(|err| {
+    //         Error::Serialisation(format!(
+    //             "destination section public key field couldn't be serialized in header: {}",
+    //             err
+    //         ))
+    //     })?;
+
+    Ok(Bytes::from(updated_bytes))
+   
+}
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -14,13 +14,14 @@ mod msg_id;
 #[cfg(not(feature = "client-only"))]
 pub mod node;
 pub mod section_info;
-mod serialisation;
+pub mod serialisation;
 
 pub use self::{
     errors::{Error, Result},
     location::{Aggregation, DstLocation, EndUser, Itinerary, SrcLocation},
     msg_id::{MessageId, MESSAGE_ID_LEN},
     serialisation::WireMsg,
+    serialisation::wire_msg_header::update_dest_xor_for_serialized_bytes
 };
 use bytes::Bytes;
 use serde::{Deserialize, Serialize};
