@@ -21,7 +21,6 @@ pub use self::{
     location::{Aggregation, DstLocation, EndUser, Itinerary, SrcLocation},
     msg_id::{MessageId, MESSAGE_ID_LEN},
     serialisation::WireMsg,
-    serialisation::wire_msg_header::update_dest_xor_for_serialized_bytes
 };
 use bytes::Bytes;
 use serde::{Deserialize, Serialize};
@@ -95,30 +94,25 @@ impl MessageType {
         match self {
             Self::SectionInfo { msg, dest_info } => {
                 WireMsg::new_section_info_msg(msg, dest_info.dest, dest_info.dest_section_pk)
-                
             }
             Self::Client { msg, dest_info } => {
                 WireMsg::new_client_msg(msg, dest_info.dest, dest_info.dest_section_pk)
-                
             }
             #[cfg(not(feature = "client-only"))]
             Self::Routing { msg, dest_info } => {
                 WireMsg::new_routing_msg(msg, dest_info.dest, dest_info.dest_section_pk)
-                
             }
             #[cfg(not(feature = "client-only"))]
             Self::Node {
                 msg,
                 dest_info,
                 src_section_pk,
-            } => {
-            WireMsg::new_node_msg(
+            } => WireMsg::new_node_msg(
                 msg,
                 dest_info.dest,
                 dest_info.dest_section_pk,
                 *src_section_pk,
-            ) 
-        },
+            ),
         }
     }
 

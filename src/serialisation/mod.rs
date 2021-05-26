@@ -149,9 +149,10 @@ impl WireMsg {
         let buf_at_payload = self.header.write(&mut buffer)?;
 
         // ...and finally we write the bytes of the serialized payload
-        let the_buffer = gen_simple(slice(self.payload.clone()), buf_at_payload).map_err(|err| {
-            Error::Serialisation(format!("message payload couldn't be serialized: {}", err))
-        })?;
+        let the_buffer =
+            gen_simple(slice(self.payload.clone()), buf_at_payload).map_err(|err| {
+                Error::Serialisation(format!("message payload couldn't be serialized: {}", err))
+            })?;
 
         // let buffer = the_buffer;
 
@@ -302,7 +303,7 @@ impl WireMsg {
         self.header.size() as usize + self.payload.len()
     }
 
-
+    /// Update dest_pk and or dest in the WireMsg
     pub fn update_dest_info(&mut self, dest_pk: Option<PublicKey>, dest: Option<XorName>) {
         if let Some(dest) = dest {
             self.header.dest = dest
@@ -319,11 +320,9 @@ mod tests {
     use anyhow::Result;
     use threshold_crypto::SecretKey;
     use xor_name::XorName;
-    use crate::update_dest_xor_for_serialized_bytes;
 
     #[test]
     fn serialisation_section_info_msg() -> Result<()> {
-
         let dest = XorName::random();
         let dest_section_pk = SecretKey::random().public_key();
 
@@ -354,24 +353,26 @@ mod tests {
         Ok(())
     }
 
-
     #[test]
     fn serialisation_and_update_dest_for_section_info_msg() -> Result<()> {
         let dest = XorName::random();
         let dest_section_pk = SecretKey::random().public_key();
 
         let query = section_info::Message::GetSectionQuery(dest_section_pk.into());
-        let wire_msg = WireMsg::new_section_info_msg(&query, dest, dest_section_pk)?;
+        let mut wire_msg = WireMsg::new_section_info_msg(&query, dest, dest_section_pk)?;
         let serialized = wire_msg.serialize()?;
 
+        let wire_msg2 = wire_msg.clone();
         let dest_new = XorName::random();
-        let udpated_dest_bytes = update_dest_xor_for_serialized_bytes( serialized.clone(), dest_new)?;
+        wire_msg.update_dest_info(None, Some(dest_new));
+        let serialised_second_msg = wire_msg.serialize()?;
 
         // test deserialisation of header
-        let deserialized = WireMsg::from(udpated_dest_bytes)?;
+        let deserialized = WireMsg::from(serialised_second_msg.clone())?;
 
         println!("deserialized wiremsg {:?}", deserialized);
-        // assert_eq!(deserialized, wire_msg);
+        assert_ne!(serialized, serialised_second_msg);
+        assert_ne!(wire_msg2, wire_msg);
         assert_eq!(deserialized.dest(), dest_new);
         assert_eq!(deserialized.dest_section_pk(), dest_section_pk);
         assert_eq!(deserialized.src_section_pk(), None);
