@@ -16,7 +16,7 @@ use super::{client, section_info, DestInfo, Error, MessageId, MessageType, Resul
 use bytes::Bytes;
 use cookie_factory::{combinator::slice, gen_simple};
 // use core::slice::SlicePattern;
-use std::fmt::Debug;
+use std::{fmt::Debug, usize};
 use threshold_crypto::PublicKey;
 use xor_name::XorName;
 
@@ -145,14 +145,45 @@ impl WireMsg {
         // First we create a buffer with the exact size
         // needed to serialize the wire msg
         let mut buffer = vec![0u8; self.size()];
+        // let mut buffer = Vec::with_capacity(self.size());
 
-        let buf_at_payload = self.header.write(&mut buffer)?;
+        println!("The buffer at start : {:?}", buffer);
+        // {
+            let buf_at_payload = self.header.write(&mut buffer)?;
+            // println!("buf_at_pay/load len: {:?}", buf_at_payload.len());
+            // let b = buf_at_payload.clone
+        // }
+        println!("The buffer payload after header write : {:?}", buf_at_payload);
 
         // ...and finally we write the bytes of the serialized payload
-        let _ =
-            gen_simple(slice(self.payload.clone()), buf_at_payload).map_err(|err| {
-                Error::Serialisation(format!("message payload couldn't be serialized: {}", err))
-            })?;
+        // let b =
+        //     gen_simple(slice(self.payload.clone()), buf_at_payload).map_err(|err| {
+        //         Error::Serialisation(format!("message payload couldn't be serialized: {}", err))
+        //     })?;
+        //     println!("The bbbbbb payload after header write : {:?}", b);
+        // let blen = buffer.len();
+        // println!("buffer len:/ {:?}", buffer.len());
+        println!("=========");
+        println!("=========");
+        println!("=========");
+        println!("=========");
+        println!("The buffer after all : {:?}", buffer);
+
+        // let mut header_size_bytes = [0; HDR_SIZE_BYTES_LEN];
+        // header_size_bytes[0..].copy_from_slice(&buffer[0..HDR_SIZE_BYTES_LEN]);
+        let header_size = self.header.size() as usize;
+
+        buffer.truncate(header_size);
+        buffer.extend(self.payload.clone());
+        println!("=========");
+        println!("=========");
+        println!("=========");
+        println!("=========");
+        println!("The buffer after mooooooore : {:?}", buffer);
+
+        // let buf = [&*buffer, &*self.payload ].concat();
+
+        // b.to_vec().extend(&*self.payload);
 
         // let buffer = the_buffer;
 

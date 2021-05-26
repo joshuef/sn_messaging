@@ -12,7 +12,7 @@ use bytes::Bytes;
 use cookie_factory::{
     bytes::{be_u16, be_u8},
     combinator::slice,
-    gen,
+    gen_simple,
 };
 use std::{convert::TryFrom, fmt::Debug, mem::size_of};
 use threshold_crypto::{PublicKey, PK_SIZE};
@@ -36,7 +36,7 @@ pub(crate) struct WireMsgHeader {
 }
 
 // Bytes length in the header for the 'header_size' field
-const HDR_SIZE_BYTES_LEN: usize = size_of::<u16>();
+pub const HDR_SIZE_BYTES_LEN: usize = size_of::<u16>();
 
 // Bytes index and size in the header for the 'version' field
 const HDR_VERSION_BYTES_START: usize = HDR_SIZE_BYTES_LEN;
@@ -218,7 +218,7 @@ impl WireMsgHeader {
 
     pub fn write<'a>(&self, buffer: &'a mut [u8]) -> Result<&'a mut [u8]> {
         // Let's write the header size first
-        let (buf_at_version, _) = gen(be_u16(self.header_size), buffer).map_err(|err| {
+        let buf_at_version = gen_simple(be_u16(self.header_size), buffer).map_err(|err| {
             Error::Serialisation(format!(
                 "header size value couldn't be serialized in header: {}",
                 err
@@ -226,7 +226,7 @@ impl WireMsgHeader {
         })?;
 
         // Now let's write the serialisation protocol version bytes
-        let (buf_at_msg_id, _) = gen(be_u16(self.version), buf_at_version).map_err(|err| {
+        let buf_at_msg_id = gen_simple(be_u16(self.version), buf_at_version).map_err(|err| {
             Error::Serialisation(format!(
                 "version field couldn't be serialized in header: {}",
                 err
@@ -234,8 +234,8 @@ impl WireMsgHeader {
         })?;
 
         // Write the message id bytes
-        let (buf_at_msg_kind, _) =
-            gen(slice(self.msg_id.as_ref()), buf_at_msg_id).map_err(|err| {
+        let buf_at_msg_kind =
+            gen_simple(slice(self.msg_id.as_ref()), buf_at_msg_id).map_err(|err| {
                 Error::Serialisation(format!(
                     "message id field couldn't be serialized in header: {}",
                     err
@@ -243,7 +243,7 @@ impl WireMsgHeader {
             })?;
 
         // ...now let's write the value signaling the message kind
-        let (buf_at_dest, _) = gen(be_u8(self.kind.into()), buf_at_msg_kind).map_err(|err| {
+        let buf_at_dest = gen_simple(be_u8(self.kind.into()), buf_at_msg_kind).map_err(|err| {
             Error::Serialisation(format!(
                 "message kind field couldn't be serialized in header: {}",
                 err
@@ -251,7 +251,7 @@ impl WireMsgHeader {
         })?;
 
         // ...write the destination bytes
-        let (buf_at_dest_pk, _) = gen(slice(&self.dest), buf_at_dest).map_err(|err| {
+        let buf_at_dest_pk = gen_simple(slice(&self.dest), buf_at_dest).map_err(|err| {
             Error::Serialisation(format!(
                 "destination field couldn't be serialized in header: {}",
                 err
@@ -259,7 +259,7 @@ impl WireMsgHeader {
         })?;
 
         // ...now let's write the destination section public key
-        let (buf_at_src_pk, _) = gen(slice(self.dest_section_pk.to_bytes()), buf_at_dest_pk)
+        let buf_at_src_pk = gen_simple(slice(self.dest_section_pk.to_bytes()), buf_at_dest_pk)
             .map_err(|err| {
                 Error::Serialisation(format!(
                     "destination section public key field couldn't be serialized in header: {}",
@@ -277,7 +277,7 @@ impl WireMsgHeader {
                 )));
             }
 
-            let (buf, _) = gen(slice(src_section_pk.to_bytes()), buf_at_src_pk).map_err(|err| {
+            let buf = gen_simple(slice(src_section_pk.to_bytes()), buf_at_src_pk).map_err(|err| {
                 Error::Serialisation(format!(
                     "source section public key field couldn't be serialized in header: {}",
                     err
@@ -297,9 +297,9 @@ impl WireMsgHeader {
         self.header_size
     }
 
-    // Size in bytes when serialized if a WireMsgHeader
+    // Size in bytes when serialized of a WireMsgHeader
     // depending if a source section public key is included.
-    fn bytes_size(with_src_section_pk: bool) -> usize {
+    pub fn bytes_size(with_src_section_pk: bool) -> usize {
         // We don't use 'std::mem::size_of' since, for example, the
         // 'MessageKind' enum it reports 2 bytes mem size,
         // and we want to serialize that field using 1 byte only.
