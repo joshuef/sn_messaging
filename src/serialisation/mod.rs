@@ -14,7 +14,8 @@ use self::wire_msg_header::{MessageKind, WireMsgHeader};
 use super::node;
 use super::{client, section_info, DestInfo, Error, MessageId, MessageType, Result};
 use bytes::Bytes;
-use cookie_factory::{combinator::slice, gen};
+use cookie_factory::{combinator::slice, gen_simple};
+// use core::slice::SlicePattern;
 use std::fmt::Debug;
 use threshold_crypto::PublicKey;
 use xor_name::XorName;
@@ -148,12 +149,14 @@ impl WireMsg {
         let buf_at_payload = self.header.write(&mut buffer)?;
 
         // ...and finally we write the bytes of the serialized payload
-        let _ = gen(slice(self.payload.clone()), buf_at_payload).map_err(|err| {
+        let the_buffer = gen_simple(slice(self.payload.clone()), buf_at_payload).map_err(|err| {
             Error::Serialisation(format!("message payload couldn't be serialized: {}", err))
         })?;
 
+        // let buffer = the_buffer;
+
         // We can now return the buffer containing the written bytes
-        Ok(Bytes::from(buffer))
+        Ok(Bytes::copy_from_slice(buffer.as_slice()))
     }
 
     /// Deserialize the payload from this WireMsg returning a Message instance.
