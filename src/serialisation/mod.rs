@@ -149,7 +149,7 @@ impl WireMsg {
         let buf_at_payload = self.header.write(&mut buffer)?;
 
         // ...and finally we write the bytes of the serialized payload
-        let the_buffer =
+        let _ =
             gen_simple(slice(self.payload.clone()), buf_at_payload).map_err(|err| {
                 Error::Serialisation(format!("message payload couldn't be serialized: {}", err))
             })?;
@@ -157,7 +157,7 @@ impl WireMsg {
         // let buffer = the_buffer;
 
         // We can now return the buffer containing the written bytes
-        Ok(Bytes::copy_from_slice(buffer.as_slice()))
+        Ok(Bytes::copy_from_slice(&*buffer))
     }
 
     /// Deserialize the payload from this WireMsg returning a Message instance.
