@@ -157,7 +157,7 @@ impl WireMsg {
         // let buffer = the_buffer;
 
         // We can now return the buffer containing the written bytes
-        Ok(Bytes::copy_from_slice(&*buffer))
+        Ok(Bytes::copy_from_slice(&buffer.as_ref()))
     }
 
     /// Deserialize the payload from this WireMsg returning a Message instance.
