@@ -145,50 +145,16 @@ impl WireMsg {
         // First we create a buffer with the exact size
         // needed to serialize the wire msg
         let mut buffer = vec![0u8; self.size()];
-        // let mut buffer = Vec::with_capacity(self.size());
-
-        // println!("The buffer at start : {:?}", buffer);
-        // {
-            let buf_at_payload = self.header.write(&mut buffer)?;
-            // println!("buf_at_pay/load len: {:?}", buf_at_payload.len());
-            // let b = buf_at_payload.clone
-        // }
-        // println!("The buffer payload after header write : {:?}", buf_at_payload);
-
-        // ...and finally we write the bytes of the serialized payload
-        // let b =
-        //     gen_simple(slice(self.payload.clone()), buf_at_payload).map_err(|err| {
-        //         Error::Serialisation(format!("message payload couldn't be serialized: {}", err))
-        //     })?;
-        //     println!("The bbbbbb payload after header write : {:?}", b);
-        // let blen = buffer.len();
-        // println!("buffer len:/ {:?}", buffer.len());
-        // println!("=========");
-        // println!("=========");
-        // println!("=========");
-        // println!("=========");
-        // println!("The buffer after all : {:?}", buffer);
-
-        // let mut header_size_bytes = [0; HDR_SIZE_BYTES_LEN];
-        // header_size_bytes[0..].copy_from_slice(&buffer[0..HDR_SIZE_BYTES_LEN]);
+        // write out header to the buffer
+        let _ = self.header.write(&mut buffer)?;
+        // get the header size
         let header_size = self.header.size() as usize;
-
+        // shrink to that size now
         buffer.truncate(header_size);
-        buffer.extend(self.payload.clone());
-        // println!("=========");
-        // println!("=========");
-        // println!("=========");
-        // println!("=========");
-        // println!("The buffer after mooooooore : {:?}", buffer);
-
-        // let buf = [&*buffer, &*self.payload ].concat();
-
-        // b.to_vec().extend(&*self.payload);
-
-        // let buffer = the_buffer;
-
-        // We can now return the buffer containing the written bytes
-        Ok(Bytes::copy_from_slice(&buffer.as_ref()))
+        // and finally extend with payload
+        buffer.extend(self.payload.to_vec());
+        
+        Ok(Bytes::from(buffer))
     }
 
     /// Deserialize the payload from this WireMsg returning a Message instance.
