@@ -147,13 +147,13 @@ impl WireMsg {
         let mut buffer = vec![0u8; self.size()];
         // let mut buffer = Vec::with_capacity(self.size());
 
-        println!("The buffer at start : {:?}", buffer);
+        // println!("The buffer at start : {:?}", buffer);
         // {
             let buf_at_payload = self.header.write(&mut buffer)?;
             // println!("buf_at_pay/load len: {:?}", buf_at_payload.len());
             // let b = buf_at_payload.clone
         // }
-        println!("The buffer payload after header write : {:?}", buf_at_payload);
+        // println!("The buffer payload after header write : {:?}", buf_at_payload);
 
         // ...and finally we write the bytes of the serialized payload
         // let b =
@@ -163,11 +163,11 @@ impl WireMsg {
         //     println!("The bbbbbb payload after header write : {:?}", b);
         // let blen = buffer.len();
         // println!("buffer len:/ {:?}", buffer.len());
-        println!("=========");
-        println!("=========");
-        println!("=========");
-        println!("=========");
-        println!("The buffer after all : {:?}", buffer);
+        // println!("=========");
+        // println!("=========");
+        // println!("=========");
+        // println!("=========");
+        // println!("The buffer after all : {:?}", buffer);
 
         // let mut header_size_bytes = [0; HDR_SIZE_BYTES_LEN];
         // header_size_bytes[0..].copy_from_slice(&buffer[0..HDR_SIZE_BYTES_LEN]);
@@ -175,11 +175,11 @@ impl WireMsg {
 
         buffer.truncate(header_size);
         buffer.extend(self.payload.clone());
-        println!("=========");
-        println!("=========");
-        println!("=========");
-        println!("=========");
-        println!("The buffer after mooooooore : {:?}", buffer);
+        // println!("=========");
+        // println!("=========");
+        // println!("=========");
+        // println!("=========");
+        // println!("The buffer after mooooooore : {:?}", buffer);
 
         // let buf = [&*buffer, &*self.payload ].concat();
 
