@@ -53,9 +53,9 @@ const HDR_KIND_BYTES_START: usize = HDR_MSG_ID_BYTES_END;
 const HDR_KIND_BYTES_LEN: usize = 1;
 
 // Bytes index in the header for the 'dest' field
-const HDR_DEST_BYTES_START: usize = HDR_KIND_BYTES_START + HDR_KIND_BYTES_LEN;
+pub const HDR_DEST_BYTES_START: usize = HDR_KIND_BYTES_START + HDR_KIND_BYTES_LEN;
 const HDR_DEST_BYTES_LEN: usize = XOR_NAME_LEN;
-const HDR_DEST_BYTES_END: usize = HDR_DEST_BYTES_START + HDR_DEST_BYTES_LEN;
+pub const HDR_DEST_BYTES_END: usize = HDR_DEST_BYTES_START + HDR_DEST_BYTES_LEN;
 
 // Bytes index in the header for the 'dest_section_pk' field
 const HDR_DEST_PK_BYTES_START: usize = HDR_DEST_BYTES_END;

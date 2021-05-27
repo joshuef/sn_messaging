@@ -9,7 +9,7 @@
 
 pub mod wire_msg_header;
 
-use self::wire_msg_header::{MessageKind, WireMsgHeader};
+use self::wire_msg_header::{MessageKind, WireMsgHeader, HDR_DEST_BYTES_START, HDR_DEST_BYTES_END};
 #[cfg(not(feature = "client-only"))]
 use super::node;
 use super::{client, section_info, DestInfo, Error, MessageId, MessageType, Result};
@@ -28,7 +28,7 @@ pub struct WireMsg {
     header: WireMsgHeader,
     payload: Bytes,
     /// Keep a ref to prev runs to optimise writing header
-    prior_serialized_bytes: Option<Bytes>
+    prior_serialized_bytes: Option<BytesMut>
 }
 
 // Ignore prio_serialized_bytes
@@ -151,7 +151,7 @@ impl WireMsg {
         let (header, payload) = WireMsgHeader::from(bytes.clone())?;
 
         // We can now create a deserialized WireMsg using the read bytes
-        Ok(Self { header, payload, prior_serialized_bytes: Some(bytes) })
+        Ok(Self { header, payload, prior_serialized_bytes: None })
     }
 
     /// Return the serialized WireMsg, which contains the WireMsgHeader bytes,
@@ -166,16 +166,42 @@ impl WireMsg {
 
         let buf_at_payload = self.header.write(&mut buffer)?;
 
-        if let Some(bytes) = self.prior_serialized_bytes.clone() {
-            let header_len = self.header.size() as usize;
-            buffer.truncate(header_len);
-            let bytes_only  = bytes.slice(header_len..);
+        if let Some(mut bytes) = self.prior_serialized_bytes.clone() {
 
 
-            buffer.extend_from_slice(&*bytes_only);
-            let bytes = buffer.freeze();
+            // let mut b = BytesMut::new();
+            // b.extend_from_slice(b"a good time");
+            
+            // lets assume for now we only care about dest
+            let dest = &mut bytes[HDR_DEST_BYTES_START..HDR_DEST_BYTES_END];
 
-            Ok(bytes)
+            println!("dest len: {:?}", dest.len());
+            println!("dest both: {:?}, {:?}", HDR_DEST_BYTES_START, HDR_DEST_BYTES_END);
+
+            println!("dest itself: {:?}", &self.header.dest);
+
+            dest.copy_from_slice(&self.header.dest);
+        
+            // println!("{}", String::from_utf8_lossy(&b));
+
+
+
+            // let header_len = self.header.size() as usize;
+            // // buffer.truncate(header_len);
+            // let bytes_only  = bytes.split_to(HDR_DEST_BYTES_START);
+
+            //   // ...write the destination bytes
+            // let (buf_at_dest_pk, _) = gen(slice(&self.dest), buf_at_dest).map_err(|err| {
+            //     Error::Serialisation(format!(
+            //         "destination field couldn't be serialized in header: {}",
+            //         err
+            //     ))
+            // })?;
+
+            // buffer.extend_from_slice(&*bytes_only);
+            let new_bytes = bytes.freeze();
+
+            Ok(new_bytes)
         }
         else{
 
@@ -184,8 +210,8 @@ impl WireMsg {
                 Error::Serialisation(format!("message payload couldn't be serialized: {}", err))
             })?;
 
-            let bytes = buffer.freeze();
-            self.prior_serialized_bytes = Some(bytes.clone());
+            let bytes = buffer.clone().freeze();
+            self.prior_serialized_bytes = Some(buffer);
             // We can now return the buffer containing the written bytes
             Ok(bytes)
         }
