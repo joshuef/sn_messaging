@@ -27,8 +27,7 @@ use xor_name::XorName;
 pub struct WireMsg {
     header: WireMsgHeader,
     payload: Bytes,
-    /// Keep a ref to prev runs to optimise writing header
-    // prior_serialized_bytes: Option<BytesMut>
+   
 }
 
 // Ignore prio_serialized_bytes
@@ -110,7 +109,6 @@ impl WireMsg {
                 None,
             ),
             payload: Bytes::from(payload_vec),
-            prior_serialized_bytes:None
 
         })
     }
@@ -187,9 +185,13 @@ impl WireMsg {
             //// DOES USING bytesmut get us anythign here?
 
             // ...and finally we write the bytes of the serialized payload to the original buffer
-            let _ = gen_simple(slice(self.payload.clone()), buf_at_payload).map_err(|err| {
-                Error::Serialisation(format!("message payload couldn't be serialized: {}", err))
-            })?;
+            // let _ = gen_simple(slice(self.payload.clone()), buf_at_payload).map_err(|err| {
+            //     Error::Serialisation(format!("message payload couldn't be serialized: {}", err))
+            // })?;
+            
+            let len = self.header.size() as usize;
+            buffer.truncate(len);
+            buffer.extend_from_slice(&self.payload);
 
             let bytes = buffer.clone().freeze();
             // self.prior_serialized_bytes = Some(buffer);
@@ -430,7 +432,7 @@ mod tests {
         assert_eq!(deserialized.src_section_pk(), None);
 
 
-        let dest_new = XorName::random();
+        // let dest_new = XorName::random();
 
         // let new_bytes = wire_msg2.update_dest_info_on_bytes(serialised_second_msg.clone(), &dest_new);
         // assert_ne!(new_bytes, serialised_second_msg);
