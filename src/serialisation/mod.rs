@@ -156,7 +156,7 @@ impl WireMsg {
 
     /// Return the serialized WireMsg, which contains the WireMsgHeader bytes,
     /// followed by the payload bytes, i.e. the serialized Message.
-    pub fn serialize(&self) -> Result<Bytes> {
+    pub fn serialize(&mut self) -> Result<Bytes> {
         // First we create a buffer with the exact size
         // needed to serialize the wire msg
         // let mut buffer = vec![0u8; self.size()].bytes_mut();
@@ -166,24 +166,29 @@ impl WireMsg {
 
         let buf_at_payload = self.header.write(&mut buffer)?;
 
-        // if let Some(bytes) = self.prior_serialized_bytes.clone() {
-        //     let header_len = self.header.size() as usize;
-        //     let header = buffer.truncate(header_len);
-        //     let bytes_only  = bytes.slice(header_len..);
-        //     Ok(bytes)
-        // }
-        // else{
+        if let Some(bytes) = self.prior_serialized_bytes.clone() {
+            let header_len = self.header.size() as usize;
+            buffer.truncate(header_len);
+            let bytes_only  = bytes.slice(header_len..);
+
+
+            buffer.extend_from_slice(&*bytes_only);
+            let bytes = buffer.freeze();
+
+            Ok(bytes)
+        }
+        else{
 
             // ...and finally we write the bytes of the serialized payload to the original buffer
             let _ = gen_simple(slice(self.payload.clone()), buf_at_payload).map_err(|err| {
                 Error::Serialisation(format!("message payload couldn't be serialized: {}", err))
             })?;
 
-            let bytes = Bytes::from(buffer);
-            // self.prior_serialized_bytes = Some(bytes.clone());
+            let bytes = buffer.freeze();
+            self.prior_serialized_bytes = Some(bytes.clone());
             // We can now return the buffer containing the written bytes
             Ok(bytes)
-        // }
+        }
 
     }
 
@@ -354,7 +359,7 @@ mod tests {
         let dest_section_pk = SecretKey::random().public_key();
 
         let query = section_info::Message::GetSectionQuery(dest_section_pk.into());
-        let wire_msg = WireMsg::new_section_info_msg(&query, dest, dest_section_pk)?;
+        let mut wire_msg = WireMsg::new_section_info_msg(&query, dest, dest_section_pk)?;
         let serialized = wire_msg.serialize()?;
 
         // test deserialisation of header
@@ -389,16 +394,18 @@ mod tests {
         let mut wire_msg = WireMsg::new_section_info_msg(&query, dest, dest_section_pk)?;
         let serialized = wire_msg.serialize()?;
 
-        let wire_msg2 = wire_msg.clone();
+        let mut wire_msg2 = wire_msg.clone();
         let dest_new = XorName::random();
-        wire_msg.update_dest_info(None, Some(dest_new));
-        let serialised_second_msg = wire_msg.serialize()?;
+        wire_msg2.update_dest_info(None, Some(dest_new));
+        assert_ne!(wire_msg2, wire_msg);
+        
+
+        let serialised_second_msg = wire_msg2.serialize()?;
+        assert_ne!(serialized, serialised_second_msg);
 
         // test deserialisation of header
         let deserialized = WireMsg::from(serialised_second_msg.clone())?;
 
-        assert_ne!(serialized, serialised_second_msg);
-        assert_ne!(wire_msg2, wire_msg);
         assert_eq!(deserialized.dest(), dest_new);
         assert_eq!(deserialized.dest_section_pk(), dest_section_pk);
         assert_eq!(deserialized.src_section_pk(), None);
@@ -434,7 +441,7 @@ mod tests {
         };
 
         // first test without including a source section public key in the header
-        let wire_msg = WireMsg::new_node_msg(&node_cmd, dest, dest_section_pk, None)?;
+        let mut wire_msg = WireMsg::new_node_msg(&node_cmd, dest, dest_section_pk, None)?;
         let serialized = wire_msg.serialize()?;
 
         // test deserialisation of header
@@ -459,7 +466,7 @@ mod tests {
         );
 
         // let's now test including a source section public key in the header
-        let wire_msg_with_src_pk =
+        let mut wire_msg_with_src_pk =
             WireMsg::new_node_msg(&node_cmd, dest, dest_section_pk, Some(src_section_pk))?;
         let serialized = wire_msg_with_src_pk.serialize()?;
 
