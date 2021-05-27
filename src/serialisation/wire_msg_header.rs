@@ -217,6 +217,7 @@ impl WireMsgHeader {
     }
 
     pub fn write<'a>(&self, buffer: &'a mut [u8]) -> Result<&'a mut [u8]> {
+        
         // Let's write the header size first
         let (buf_at_version, _) = gen(be_u16(self.header_size), buffer).map_err(|err| {
             Error::Serialisation(format!(

@@ -13,7 +13,7 @@ use self::wire_msg_header::{MessageKind, WireMsgHeader};
 #[cfg(not(feature = "client-only"))]
 use super::node;
 use super::{client, section_info, DestInfo, Error, MessageId, MessageType, Result};
-use bytes::Bytes;
+use bytes::{Bytes, BytesMut};
 use cookie_factory::{combinator::slice, gen_simple};
 use std::fmt::Debug;
 use threshold_crypto::PublicKey;
@@ -23,10 +23,20 @@ use xor_name::XorName;
 // along with a header (WireMsgHeader) which contains the information needed
 // by the recipient to properly deserialize it.
 // The WireMsg struct provides the utilities to serialize and deserialize messages.
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, Clone)]
 pub struct WireMsg {
     header: WireMsgHeader,
     payload: Bytes,
+    /// Keep a ref to prev runs to optimise writing header
+    prior_serialized_bytes: Option<Bytes>
+}
+
+// Ignore prio_serialized_bytes
+impl PartialEq for WireMsg {
+    fn eq(&self, other: &Self) -> bool {
+        self.header == other.header &&
+        self.payload == other.payload
+    }
 }
 
 impl WireMsg {
@@ -52,6 +62,7 @@ impl WireMsg {
                 None,
             ),
             payload: Bytes::from(payload_vec),
+            prior_serialized_bytes: None
         })
     }
 
@@ -72,6 +83,7 @@ impl WireMsg {
         Ok(Self {
             header: WireMsgHeader::new(msg.id(), MessageKind::Client, dest, dest_section_pk, None),
             payload: Bytes::from(payload_vec),
+            prior_serialized_bytes:None
         })
     }
 
@@ -98,6 +110,8 @@ impl WireMsg {
                 None,
             ),
             payload: Bytes::from(payload_vec),
+            prior_serialized_bytes:None
+
         })
     }
 
@@ -125,6 +139,8 @@ impl WireMsg {
                 src_section_pk,
             ),
             payload: Bytes::from(payload_vec),
+            prior_serialized_bytes:None
+
         })
     }
 
@@ -132,10 +148,10 @@ impl WireMsg {
     /// To succeed, the bytes should contain at least a valid WireMsgHeader.
     pub fn from(bytes: Bytes) -> Result<Self> {
         // Deserialize the header bytes first
-        let (header, payload) = WireMsgHeader::from(bytes)?;
+        let (header, payload) = WireMsgHeader::from(bytes.clone())?;
 
         // We can now create a deserialized WireMsg using the read bytes
-        Ok(Self { header, payload })
+        Ok(Self { header, payload, prior_serialized_bytes: Some(bytes) })
     }
 
     /// Return the serialized WireMsg, which contains the WireMsgHeader bytes,
@@ -143,17 +159,32 @@ impl WireMsg {
     pub fn serialize(&self) -> Result<Bytes> {
         // First we create a buffer with the exact size
         // needed to serialize the wire msg
-        let mut buffer = vec![0u8; self.size()];
+        // let mut buffer = vec![0u8; self.size()].bytes_mut();
+        let mut buffer = BytesMut::with_capacity(self.size());
+        buffer.resize(self.size(), 0u8);
+        // let mut buffer = BytesMut::from();
 
         let buf_at_payload = self.header.write(&mut buffer)?;
 
-        // ...and finally we write the bytes of the serialized payload to the original buffer
-        let _ = gen_simple(slice(self.payload.clone()), buf_at_payload).map_err(|err| {
-            Error::Serialisation(format!("message payload couldn't be serialized: {}", err))
-        })?;
+        // if let Some(bytes) = self.prior_serialized_bytes.clone() {
+        //     let header_len = self.header.size() as usize;
+        //     let header = buffer.truncate(header_len);
+        //     let bytes_only  = bytes.slice(header_len..);
+        //     Ok(bytes)
+        // }
+        // else{
 
-        // We can now return the buffer containing the written bytes
-        Ok(Bytes::from(buffer))
+            // ...and finally we write the bytes of the serialized payload to the original buffer
+            let _ = gen_simple(slice(self.payload.clone()), buf_at_payload).map_err(|err| {
+                Error::Serialisation(format!("message payload couldn't be serialized: {}", err))
+            })?;
+
+            let bytes = Bytes::from(buffer);
+            // self.prior_serialized_bytes = Some(bytes.clone());
+            // We can now return the buffer containing the written bytes
+            Ok(bytes)
+        // }
+
     }
 
     /// Deserialize the payload from this WireMsg returning a Message instance.
