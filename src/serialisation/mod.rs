@@ -154,7 +154,7 @@ impl WireMsg {
 
     /// Return the serialized WireMsg, which contains the WireMsgHeader bytes,
     /// followed by the payload bytes, i.e. the serialized Message.
-    pub fn serialize(&mut self) -> Result<Bytes> {
+    pub fn serialize(&self) -> Result<Bytes> {
         // First we create a buffer with the exact size
         // needed to serialize the wire msg
         // let mut buffer = vec![0u8; self.size()].bytes_mut();
@@ -162,7 +162,7 @@ impl WireMsg {
         buffer.resize(self.size(), 0u8);
         // let mut buffer = BytesMut::from();
 
-        let buf_at_payload = self.header.write(&mut buffer)?;
+        let _ = self.header.write(&mut buffer)?;
 
         // if let Some(mut bytes) = self.prior_serialized_bytes.clone() {
 
@@ -190,10 +190,18 @@ impl WireMsg {
             // })?;
             
             let len = self.header.size() as usize;
-            buffer.truncate(len);
-            buffer.extend_from_slice(&self.payload);
+            // buffer.truncate(len);
+            
+            // get the part of buffer for the payload
+            let payload_zone = &mut buffer[len..];
+            // copy it in
+            payload_zone.copy_from_slice(&self.payload);
 
-            let bytes = buffer.clone().freeze();
+            
+
+            // buffer.extend_from_slice(&self.payload);
+
+            let bytes = buffer.freeze();
             // self.prior_serialized_bytes = Some(buffer);
             // We can now return the buffer containing the written bytes
             Ok(bytes)
@@ -355,7 +363,7 @@ impl WireMsg {
     }
 
      /// Update dest_pk and or dest in the WireMsg
-     pub fn update_dest_info_on_bytes(&mut self, bytes: Bytes,  new_dest: &XorName) -> Bytes {
+     pub fn update_dest_info_on_bytes( bytes: Bytes,  new_dest: &XorName) -> Bytes {
         let mut b = BytesMut::new();
         b.extend_from_slice(&bytes);
         // lets assume for now we only care about dest
@@ -380,7 +388,7 @@ mod tests {
         let dest_section_pk = SecretKey::random().public_key();
 
         let query = section_info::Message::GetSectionQuery(dest_section_pk.into());
-        let mut wire_msg = WireMsg::new_section_info_msg(&query, dest, dest_section_pk)?;
+        let wire_msg = WireMsg::new_section_info_msg(&query, dest, dest_section_pk)?;
         let serialized = wire_msg.serialize()?;
 
         // test deserialisation of header
@@ -412,7 +420,7 @@ mod tests {
         let dest_section_pk = SecretKey::random().public_key();
 
         let query = section_info::Message::GetSectionQuery(dest_section_pk.into());
-        let mut wire_msg = WireMsg::new_section_info_msg(&query, dest, dest_section_pk)?;
+        let wire_msg = WireMsg::new_section_info_msg(&query, dest, dest_section_pk)?;
         let serialized = wire_msg.serialize()?;
 
         let mut wire_msg2 = wire_msg.clone();
@@ -431,19 +439,32 @@ mod tests {
         assert_eq!(deserialized.dest_section_pk(), dest_section_pk);
         assert_eq!(deserialized.src_section_pk(), None);
 
-
-        // let dest_new = XorName::random();
-
-        // let new_bytes = wire_msg2.update_dest_info_on_bytes(serialised_second_msg.clone(), &dest_new);
         // assert_ne!(new_bytes, serialised_second_msg);
-
+        
         // test deserialisation of payload
         assert_eq!(
             deserialized.to_message()?,
             MessageType::SectionInfo {
-                msg: query,
+                msg: query.clone(),
                 dest_info: DestInfo {
                     dest: dest_new,
+                    dest_section_pk
+                }
+            }
+        );
+        
+        let dest_new_new = XorName::random();
+
+        let new_bytes = wire_msg2.update_dest_info_on_bytes(serialised_second_msg.clone(), &dest_new_new);
+
+        let redeserialized = WireMsg::from(new_bytes.clone())?;
+
+        assert_eq!(
+            redeserialized.to_message()?,
+            MessageType::SectionInfo {
+                msg: query,
+                dest_info: DestInfo {
+                    dest: dest_new_new,
                     dest_section_pk
                 }
             }
@@ -468,7 +489,7 @@ mod tests {
         };
 
         // first test without including a source section public key in the header
-        let mut wire_msg = WireMsg::new_node_msg(&node_cmd, dest, dest_section_pk, None)?;
+        let wire_msg = WireMsg::new_node_msg(&node_cmd, dest, dest_section_pk, None)?;
         let serialized = wire_msg.serialize()?;
 
         // test deserialisation of header
