@@ -168,10 +168,6 @@ impl WireMsg {
 
         if let Some(mut bytes) = self.prior_serialized_bytes.clone() {
 
-
-            // let mut b = BytesMut::new();
-            // b.extend_from_slice(b"a good time");
-            
             // lets assume for now we only care about dest
             let dest = &mut bytes[HDR_DEST_BYTES_START..HDR_DEST_BYTES_END];
 
@@ -182,23 +178,6 @@ impl WireMsg {
 
             dest.copy_from_slice(&self.header.dest);
         
-            // println!("{}", String::from_utf8_lossy(&b));
-
-
-
-            // let header_len = self.header.size() as usize;
-            // // buffer.truncate(header_len);
-            // let bytes_only  = bytes.split_to(HDR_DEST_BYTES_START);
-
-            //   // ...write the destination bytes
-            // let (buf_at_dest_pk, _) = gen(slice(&self.dest), buf_at_dest).map_err(|err| {
-            //     Error::Serialisation(format!(
-            //         "destination field couldn't be serialized in header: {}",
-            //         err
-            //     ))
-            // })?;
-
-            // buffer.extend_from_slice(&*bytes_only);
             let new_bytes = bytes.freeze();
 
             Ok(new_bytes)
