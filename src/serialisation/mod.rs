@@ -28,7 +28,7 @@ pub struct WireMsg {
     header: WireMsgHeader,
     payload: Bytes,
     /// Keep a ref to prev runs to optimise writing header
-    prior_serialized_bytes: Option<BytesMut>
+    // prior_serialized_bytes: Option<BytesMut>
 }
 
 // Ignore prio_serialized_bytes
@@ -62,7 +62,7 @@ impl WireMsg {
                 None,
             ),
             payload: Bytes::from(payload_vec),
-            prior_serialized_bytes: None
+            // prior_serialized_bytes: None
         })
     }
 
@@ -83,7 +83,7 @@ impl WireMsg {
         Ok(Self {
             header: WireMsgHeader::new(msg.id(), MessageKind::Client, dest, dest_section_pk, None),
             payload: Bytes::from(payload_vec),
-            prior_serialized_bytes:None
+            // prior_serialized_bytes:None
         })
     }
 
@@ -139,7 +139,7 @@ impl WireMsg {
                 src_section_pk,
             ),
             payload: Bytes::from(payload_vec),
-            prior_serialized_bytes:None
+            // prior_serialized_bytes:None
 
         })
     }
@@ -151,7 +151,7 @@ impl WireMsg {
         let (header, payload) = WireMsgHeader::from(bytes.clone())?;
 
         // We can now create a deserialized WireMsg using the read bytes
-        Ok(Self { header, payload, prior_serialized_bytes: None })
+        Ok(Self { header, payload })
     }
 
     /// Return the serialized WireMsg, which contains the WireMsgHeader bytes,
@@ -166,23 +166,25 @@ impl WireMsg {
 
         let buf_at_payload = self.header.write(&mut buffer)?;
 
-        if let Some(mut bytes) = self.prior_serialized_bytes.clone() {
+        // if let Some(mut bytes) = self.prior_serialized_bytes.clone() {
 
-            // lets assume for now we only care about dest
-            let dest = &mut bytes[HDR_DEST_BYTES_START..HDR_DEST_BYTES_END];
+        //     // lets assume for now we only care about dest
+        //     let dest = &mut bytes[HDR_DEST_BYTES_START..HDR_DEST_BYTES_END];
 
-            println!("dest len: {:?}", dest.len());
-            println!("dest both: {:?}, {:?}", HDR_DEST_BYTES_START, HDR_DEST_BYTES_END);
+        //     println!("dest len: {:?}", dest.len());
+        //     println!("dest both: {:?}, {:?}", HDR_DEST_BYTES_START, HDR_DEST_BYTES_END);
 
-            println!("dest itself: {:?}", &self.header.dest);
+        //     println!("dest itself: {:?}", &self.header.dest);
 
-            dest.copy_from_slice(&self.header.dest);
+        //     dest.copy_from_slice(&self.header.dest);
         
-            let new_bytes = bytes.freeze();
+        //     let new_bytes = bytes.freeze();
 
-            Ok(new_bytes)
-        }
-        else{
+        //     Ok(new_bytes)
+        // }
+        // else{
+
+            //// DOES USING bytesmut get us anythign here?
 
             // ...and finally we write the bytes of the serialized payload to the original buffer
             let _ = gen_simple(slice(self.payload.clone()), buf_at_payload).map_err(|err| {
@@ -190,10 +192,10 @@ impl WireMsg {
             })?;
 
             let bytes = buffer.clone().freeze();
-            self.prior_serialized_bytes = Some(buffer);
+            // self.prior_serialized_bytes = Some(buffer);
             // We can now return the buffer containing the written bytes
             Ok(bytes)
-        }
+        // }
 
     }
 
@@ -349,6 +351,18 @@ impl WireMsg {
             self.header.dest_section_pk = dest_pk
         }
     }
+
+     /// Update dest_pk and or dest in the WireMsg
+     pub fn update_dest_info_on_bytes(&mut self, bytes: Bytes,  new_dest: &XorName) -> Bytes {
+        let mut b = BytesMut::new();
+        b.extend_from_slice(&bytes);
+        // lets assume for now we only care about dest
+          let dest = &mut b[HDR_DEST_BYTES_START..HDR_DEST_BYTES_END];
+          dest.copy_from_slice(new_dest);
+
+          b.freeze()
+        
+    }
 }
 
 #[cfg(test)]
@@ -414,6 +428,12 @@ mod tests {
         assert_eq!(deserialized.dest(), dest_new);
         assert_eq!(deserialized.dest_section_pk(), dest_section_pk);
         assert_eq!(deserialized.src_section_pk(), None);
+
+
+        let dest_new = XorName::random();
+
+        // let new_bytes = wire_msg2.update_dest_info_on_bytes(serialised_second_msg.clone(), &dest_new);
+        // assert_ne!(new_bytes, serialised_second_msg);
 
         // test deserialisation of payload
         assert_eq!(
